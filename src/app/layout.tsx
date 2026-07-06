@@ -20,10 +20,10 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: "VTS Kitchen OS",
+    template: "%s — VTS Kitchen OS",
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description: "Live chats. Live orders. One kitchen command center. By Vintage Tech Solutions.",
   robots: {
     index: false,
     follow: false,

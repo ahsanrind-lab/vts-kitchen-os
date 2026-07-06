@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
   const { userId, accountId } = vtsIdentity();
-  const { contactId, conversationId } = await ensureConversation(db, userId, phone, p.name);
+  const { contactId, conversationId } = await ensureConversation(db, accountId, userId, phone, p.name);
 
   const { data: existing } = await db.from('vts_orders')
     .select('id').eq('order_ref', orderRef).maybeSingle();

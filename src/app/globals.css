@@ -4,6 +4,26 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ---- VTS Kitchen OS brand tokens (branding/VTS_BRAND_TOKENS.md) ---- */
+@theme {
+  --color-vts-primary: #6C2BC4;
+  --color-vts-primary-hover: #5A22A6;
+  --color-vts-accent: #22B5E8;
+  --color-vts-accent-hover: #1BA0D0;
+  --color-vts-bg: #0B0E1A;
+  --color-vts-surface: #141828;
+  --color-vts-surface-2: #1C2136;
+  --color-vts-border: #262B40;
+  --color-vts-text: #E8EAF2;
+  --color-vts-text-muted: #9BA1B8;
+  --color-vts-success: #10B981;
+  --color-vts-danger: #F43F5E;
+  --color-vts-ring: #F59E0B;
+}
+:root {
+  --vts-gradient: linear-gradient(135deg, #4A1E9E 0%, #7B2FBE 45%, #22B5E8 100%);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -88,32 +108,32 @@
 
 :root,
 html[data-mode="dark"] {
-  --background: oklch(0.13 0.01 260);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.18 0.01 260);
-  --card-2: oklch(0.205 0.01 260);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.18 0.01 260);
-  --popover-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.22 0.01 260);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.22 0.01 260);
-  --muted-foreground: oklch(0.65 0.01 260);
-  --accent: oklch(0.22 0.01 260);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.28 0.01 260);
-  --input: oklch(0.28 0.01 260);
+  --background: #0B0E1A;            /* vts-bg */
+  --foreground: #E8EAF2;            /* vts-text */
+  --card: #141828;                  /* vts-surface */
+  --card-2: #1C2136;                /* vts-surface-2 */
+  --card-foreground: #E8EAF2;
+  --popover: #141828;
+  --popover-foreground: #E8EAF2;
+  --secondary: #1C2136;
+  --secondary-foreground: #E8EAF2;
+  --muted: #1C2136;
+  --muted-foreground: #9BA1B8;      /* vts-text-muted */
+  --accent: #1C2136;
+  --accent-foreground: #E8EAF2;
+  --destructive: #F43F5E;           /* vts-danger */
+  --border: #262B40;                /* vts-border */
+  --input: #262B40;
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
   --radius: 0.625rem;
-  --sidebar: oklch(0.16 0.01 260);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.22 0.01 260);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.28 0.01 260);
+  --sidebar: #10141F;               /* between vts-bg and vts-surface */
+  --sidebar-foreground: #E8EAF2;
+  --sidebar-accent: #1C2136;
+  --sidebar-accent-foreground: #E8EAF2;
+  --sidebar-border: #262B40;
 }
 
 html[data-mode="light"] {
@@ -148,6 +168,19 @@ html[data-mode="light"] {
 /* ---- ACCENT: primary color ---- */
 
 :root,
+html[data-theme="vts"] {
+  --primary: #6C2BC4;               /* vts-primary */
+  --primary-foreground: #FFFFFF;
+  --primary-hover: #5A22A6;
+  --primary-soft: rgb(108 43 196 / 0.14);
+  --primary-soft-2: rgb(108 43 196 / 0.22);
+  --ring: #22B5E8;                  /* vts-accent: cyan focus per brand notes */
+  --chart-1: #6C2BC4;
+  --sidebar-primary: #6C2BC4;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-ring: #22B5E8;
+}
+
 html[data-theme="violet"] {
   --primary: oklch(0.526 0.247 293);
   --primary-foreground: oklch(0.985 0 0);

@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   if (!phone || !text) return NextResponse.json({ error: 'phone and text required' }, { status: 400 });
 
   const db = supabaseAdmin();
-  const { userId } = vtsIdentity();
+  const { userId, accountId } = vtsIdentity();
 
   // Idempotency: same wamid mirrored twice -> no duplicate row.
   if (p.wamid) {
@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (dup) return NextResponse.json({ ok: true, deduped: true });
   }
 
-  const { conversationId } = await ensureConversation(db, userId, phone, p.name);
+  const { conversationId } = await ensureConversation(db, accountId, userId, phone, p.name);
   const { error } = await db.from('messages').insert({
     conversation_id: conversationId,
     sender_type: p.sender_type === 'agent' ? 'agent' : 'bot',   // schema already supports 'bot'

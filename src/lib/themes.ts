@@ -14,6 +14,7 @@
  */
 
 export const THEME_IDS = [
+  "vts",
   "violet",
   "emerald",
   "cobalt",
@@ -23,7 +24,7 @@ export const THEME_IDS = [
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "violet";
+export const DEFAULT_THEME: ThemeId = "vts";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -67,6 +68,12 @@ export interface ThemeMeta {
 }
 
 export const THEMES: ReadonlyArray<ThemeMeta> = [
+  {
+    id: "vts",
+    name: "VTS",
+    tagline: "Vintage Tech Solutions brand \u2014 deep violet with cyan focus.",
+    swatch: "#6C2BC4",
+  },
   {
     id: "violet",
     name: "Violet",

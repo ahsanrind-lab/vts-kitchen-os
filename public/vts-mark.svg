@@ -1,0 +1,23 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="VTS">
+  <defs>
+    <linearGradient id="vts" x1="10%" y1="15%" x2="90%" y2="85%">
+      <stop offset="0%" stop-color="#4A1E9E"/>
+      <stop offset="45%" stop-color="#7B2FBE"/>
+      <stop offset="100%" stop-color="#22B5E8"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#vts)" stroke-width="4">
+    <!-- hexagon outer nodes + center -->
+    <line x1="50" y1="22" x2="24" y2="37"/><line x1="50" y1="22" x2="76" y2="37"/>
+    <line x1="24" y1="37" x2="24" y2="63"/><line x1="76" y1="37" x2="76" y2="63"/>
+    <line x1="24" y1="63" x2="50" y2="78"/><line x1="76" y1="63" x2="50" y2="78"/>
+    <line x1="50" y1="22" x2="50" y2="50"/><line x1="24" y1="37" x2="50" y2="50"/>
+    <line x1="76" y1="37" x2="50" y2="50"/><line x1="24" y1="63" x2="50" y2="50"/>
+    <line x1="76" y1="63" x2="50" y2="50"/><line x1="50" y1="78" x2="50" y2="50"/>
+  </g>
+  <g fill="#0B0E1A" stroke="url(#vts)" stroke-width="4">
+    <circle cx="50" cy="22" r="7"/><circle cx="24" cy="37" r="7"/><circle cx="76" cy="37" r="7"/>
+    <circle cx="24" cy="63" r="7"/><circle cx="76" cy="63" r="7"/><circle cx="50" cy="78" r="7"/>
+    <circle cx="50" cy="50" r="8"/>
+  </g>
+</svg>

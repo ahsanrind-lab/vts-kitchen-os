@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { findExistingContact, isUniqueViolation } from '@/lib/contacts/dedupe';
 
 /** Service-role client for machine writes (n8n ingest). Server-only. */
 let _admin: SupabaseClient | null = null;
@@ -11,28 +12,41 @@ export function supabaseAdmin(): SupabaseClient {
 }
 
 /**
- * Find-or-create the contact + open conversation for a phone number,
- * mirroring the shapes wacrm's own webhook creates (001_initial_schema).
+ * Find-or-create the contact + conversation for a phone number,
+ * mirroring wacrm's own webhook (findOrCreateContact /
+ * findOrCreateConversation in api/whatsapp/webhook): account_id is the
+ * tenancy column (RLS: is_account_member), user_id is the NOT NULL
+ * audit column. Phone matching goes through the shared dedupe helper
+ * so this path and the webhook agree on what "same number" means, and
+ * a lost insert race re-resolves via the 022 unique index instead of
+ * dropping the event.
  */
 export async function ensureConversation(
-  db: SupabaseClient, userId: string, phone: string, name?: string,
+  db: SupabaseClient, accountId: string, userId: string, phone: string, name?: string,
 ): Promise<{ contactId: string; conversationId: string }> {
-  let { data: contact } = await db.from('contacts')
-    .select('id').eq('user_id', userId).eq('phone', phone).maybeSingle();
+  let contact = await findExistingContact(db, accountId, phone);
   if (!contact) {
     const { data, error } = await db.from('contacts')
-      .insert({ user_id: userId, phone, name: name ?? null })
-      .select('id').single();
-    if (error) throw error;
-    contact = data;
+      .insert({ account_id: accountId, user_id: userId, phone, name: name || phone })
+      .select().single();
+    if (error) {
+      if (isUniqueViolation(error)) contact = await findExistingContact(db, accountId, phone);
+      if (!contact) throw error;
+    } else {
+      contact = data;
+    }
+  } else if (name && name !== contact.name) {
+    await db.from('contacts')
+      .update({ name, updated_at: new Date().toISOString() })
+      .eq('id', contact.id);
   }
+  if (!contact) throw new Error('contact resolution failed');
   let { data: convo } = await db.from('conversations')
-    .select('id').eq('user_id', userId).eq('contact_id', contact.id)
-    .neq('status', 'closed').order('created_at', { ascending: false })
-    .limit(1).maybeSingle();
+    .select('id').eq('account_id', accountId).eq('contact_id', contact.id)
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
   if (!convo) {
     const { data, error } = await db.from('conversations')
-      .insert({ user_id: userId, contact_id: contact.id, status: 'open' })
+      .insert({ account_id: accountId, user_id: userId, contact_id: contact.id, status: 'open' })
       .select('id').single();
     if (error) throw error;
     convo = data;

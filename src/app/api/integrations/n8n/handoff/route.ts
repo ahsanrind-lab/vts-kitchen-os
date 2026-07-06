@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
   const db = supabaseAdmin();
   const { userId, accountId } = vtsIdentity();
-  const { conversationId } = await ensureConversation(db, userId, phone, p.name);
+  const { conversationId } = await ensureConversation(db, accountId, userId, phone, p.name);
 
   await db.from('conversations').update({
     vts_bot_enabled: false,

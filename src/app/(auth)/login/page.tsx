@@ -83,7 +83,7 @@ function LoginPageInner() {
           <CardDescription className="text-muted-foreground">
             {inviteToken
               ? "Sign in and we'll take you to the invitation."
-              : "Sign in to your account"}
+              : "Sign in to VTS Kitchen OS"}
           </CardDescription>
         </CardHeader>
         <CardContent>
