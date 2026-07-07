@@ -5,9 +5,8 @@ import { useState } from 'react'
 import {
   MessageSquare,
   UserPlus,
-  Briefcase,
+  ClipboardList,
   Radio,
-  Zap,
   Inbox,
 } from 'lucide-react'
 import type { ComponentType } from 'react'
@@ -33,9 +32,8 @@ interface KindTheme {
 const KIND_THEME: Record<ActivityKind, KindTheme> = {
   message: { icon: MessageSquare, badge: 'bg-blue-500/10 text-blue-400' },
   contact: { icon: UserPlus, badge: 'bg-primary/10 text-primary' },
-  deal: { icon: Briefcase, badge: 'bg-primary/10 text-primary' },
+  order: { icon: ClipboardList, badge: 'bg-primary/10 text-primary' },
   broadcast: { icon: Radio, badge: 'bg-amber-500/10 text-amber-400' },
-  automation: { icon: Zap, badge: 'bg-rose-500/10 text-rose-400' },
 }
 
 export function ActivityFeed({ items, loading }: ActivityFeedProps) {
@@ -76,7 +74,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
           <EmptyState
             icon={Inbox}
             title="No activity yet"
-            hint="Activity from messages, deals, broadcasts, and automations will appear here."
+            hint="Orders, customer messages, new contacts, and broadcasts will appear here."
           />
         </div>
       ) : (

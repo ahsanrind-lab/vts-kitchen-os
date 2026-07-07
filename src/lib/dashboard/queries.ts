@@ -7,12 +7,12 @@ import {
   mondayIndex,
   startOfLocalDay,
 } from './date-utils'
+import { BOARD_COLUMNS, businessDateOf, formatRs } from '@/lib/vts/orders'
 import type {
   ActivityItem,
   ConversationsSeriesPoint,
   MetricsBundle,
-  PipelineDonutData,
-  PipelineStageSlice,
+  OrderStatusSlice,
   ResponseTimeBucket,
   ResponseTimeSummary,
 } from './types'
@@ -29,9 +29,23 @@ type DB = SupabaseClient
 
 // --- 1. Metric cards ---------------------------------------------------
 
+interface OrderRowLite {
+  status: string
+  total: number
+  created_at: string
+  updated_at: string
+}
+
 export async function loadMetrics(db: DB): Promise<MetricsBundle> {
   const todayStart = startOfLocalDay().toISOString()
   const yesterdayStart = daysAgoStart(1).toISOString()
+  // Orders follow the business-day convention (5am Asia/Karachi roll,
+  // same as the vts_daily_sales view). Fetch a 3-day window and bucket
+  // client-side so today/yesterday both resolve correctly around the
+  // 5am boundary.
+  const orderWindowStart = new Date(
+    Date.now() - 3 * 24 * 3600 * 1000,
+  ).toISOString()
 
   const [
     openConvCur,
@@ -39,7 +53,7 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
     newConvYesterday,
     newContactsToday,
     newContactsYesterday,
-    openDeals,
+    orderRows,
     messagesToday,
     messagesYesterday,
   ] = await Promise.all([
@@ -61,22 +75,81 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       .select('id', { count: 'exact', head: true })
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
-    db.from('deals').select('value, status').eq('status', 'open'),
+    db
+      .from('vts_orders')
+      .select('status, total, created_at, updated_at')
+      .gte('created_at', orderWindowStart),
+    // "Messages sent" must count the bot too — it does most of the
+    // sending. Counting agent-only made the metric read 0 on a day
+    // the bot handled dozens of chats.
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
+      .in('sender_type', ['agent', 'bot'])
       .gte('created_at', todayStart),
     db
       .from('messages')
       .select('id', { count: 'exact', head: true })
-      .eq('sender_type', 'agent')
+      .in('sender_type', ['agent', 'bot'])
       .gte('created_at', yesterdayStart)
       .lt('created_at', todayStart),
   ])
 
-  const openDealsRows = (openDeals.data ?? []) as { value: number | null }[]
-  const openDealsValue = openDealsRows.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  // --- order aggregation (business-day buckets) ---
+  const rows = (orderRows.data ?? []) as OrderRowLite[]
+  const todayBd = businessDateOf(new Date())
+  const yesterdayBd = businessDateOf(new Date(Date.now() - 24 * 3600 * 1000))
+
+  let todayCount = 0
+  let todayRs = 0
+  let yCount = 0
+  let yRs = 0
+  const fulfillmentMins: number[] = []
+  const statusCounts = new Map<string, { count: number; totalRs: number }>()
+
+  for (const o of rows) {
+    const bd = businessDateOf(o.created_at)
+    if (o.status !== 'cancelled') {
+      if (bd === todayBd) {
+        todayCount += 1
+        todayRs += o.total || 0
+      } else if (bd === yesterdayBd) {
+        yCount += 1
+        yRs += o.total || 0
+      }
+    }
+    if (bd === todayBd) {
+      const bucket = statusCounts.get(o.status) ?? { count: 0, totalRs: 0 }
+      bucket.count += 1
+      bucket.totalRs += o.total || 0
+      statusCounts.set(o.status, bucket)
+      if (o.status === 'delivered') {
+        const mins =
+          (new Date(o.updated_at).getTime() - new Date(o.created_at).getTime()) /
+          60_000
+        if (mins >= 0) fulfillmentMins.push(mins)
+      }
+    }
+  }
+
+  const STATUS_LABELS: Record<string, string> = {
+    awaiting_payment: 'Awaiting payment',
+    ...Object.fromEntries(BOARD_COLUMNS.map((c) => [c.key, c.label])),
+    cancelled: 'Cancelled',
+  }
+  const STATUS_ORDER = [
+    'awaiting_payment',
+    ...BOARD_COLUMNS.map((c) => c.key),
+    'cancelled',
+  ]
+  const ordersByStatus: OrderStatusSlice[] = STATUS_ORDER.filter((s) =>
+    statusCounts.has(s),
+  ).map((s) => ({
+    status: s,
+    label: STATUS_LABELS[s] ?? s,
+    count: statusCounts.get(s)!.count,
+    totalRs: statusCounts.get(s)!.totalRs,
+  }))
 
   return {
     activeConversations: {
@@ -90,8 +163,14 @@ export async function loadMetrics(db: DB): Promise<MetricsBundle> {
       current: newContactsToday.count ?? 0,
       previous: newContactsYesterday.count ?? 0,
     },
-    openDealsValue,
-    openDealsCount: openDealsRows.length,
+    todayOrders: { current: todayCount, previous: yCount },
+    todayRevenueRs: { current: todayRs, previous: yRs },
+    avgFulfillmentMins:
+      fulfillmentMins.length === 0
+        ? null
+        : fulfillmentMins.reduce((a, b) => a + b, 0) / fulfillmentMins.length,
+    deliveredToday: fulfillmentMins.length,
+    ordersByStatus,
     messagesSentToday: {
       current: messagesToday.count ?? 0,
       previous: messagesYesterday.count ?? 0,
@@ -128,46 +207,7 @@ export async function loadConversationsSeries(
   return keys.map((day) => ({ day, ...(buckets.get(day) ?? { incoming: 0, outgoing: 0 }) }))
 }
 
-// --- 3. Pipeline donut -------------------------------------------------
-
-export async function loadPipelineDonut(db: DB): Promise<PipelineDonutData> {
-  const [stagesRes, dealsRes] = await Promise.all([
-    db.from('pipeline_stages').select('id, name, color, pipeline_id, position').order('position'),
-    db.from('deals').select('stage_id, value, status').eq('status', 'open'),
-  ])
-
-  const stages =
-    (stagesRes.data ?? []) as { id: string; name: string; color: string }[]
-  const deals = (dealsRes.data ?? []) as { stage_id: string; value: number | null }[]
-
-  const byStage = new Map<string, { count: number; total: number }>()
-  for (const d of deals) {
-    const row = byStage.get(d.stage_id) ?? { count: 0, total: 0 }
-    row.count += 1
-    row.total += d.value ?? 0
-    byStage.set(d.stage_id, row)
-  }
-
-  const slices: PipelineStageSlice[] = stages
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      color: s.color || '#64748b',
-      dealCount: byStage.get(s.id)?.count ?? 0,
-      totalValue: byStage.get(s.id)?.total ?? 0,
-    }))
-    // Hide empty stages from the ring (but we'd still show them in the
-    // legend if the user wanted a full breakdown — trimming keeps the
-    // visual clean for the common case).
-    .filter((s) => s.totalValue > 0 || s.dealCount > 0)
-
-  return {
-    stages: slices,
-    totalValue: slices.reduce((sum, s) => sum + s.totalValue, 0),
-  }
-}
-
-// --- 4. Response time by day of week ----------------------------------
+// --- 3. Response time by day of week ----------------------------------
 
 export async function loadResponseTime(db: DB): Promise<ResponseTimeSummary> {
   // Pull the last 14 days of messages in one shot, then walk per
@@ -263,13 +303,15 @@ export async function loadResponseTime(db: DB): Promise<ResponseTimeSummary> {
   }
 }
 
-// --- 5. Activity feed --------------------------------------------------
+// --- 4. Activity feed --------------------------------------------------
 
 export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> {
   // Pull ~10 from each source (plenty of headroom after merge-sort),
   // then interleave by timestamp. The individual per-table limits
   // keep the payload small; the final limit is enforced after sort.
-  const [msgs, contacts, deals, broadcasts, autoLogs] = await Promise.all([
+  // Deals and automation logs are gone from this deployment's feed —
+  // orders are the restaurant's activity spine.
+  const [msgs, contacts, orders, broadcasts] = await Promise.all([
     db
       .from('messages')
       .select('id, content_text, sender_type, created_at, conversation_id, conversations(contact_id, contacts(name, phone))')
@@ -282,20 +324,15 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
       .order('created_at', { ascending: false })
       .limit(10),
     db
-      .from('deals')
-      .select('id, title, updated_at, stage:pipeline_stages(name)')
-      .order('updated_at', { ascending: false })
+      .from('vts_orders')
+      .select('id, order_ref, total, status, customer_name, phone, created_at')
+      .order('created_at', { ascending: false })
       .limit(10),
     db
       .from('broadcasts')
       .select('id, name, status, total_recipients, created_at')
       .order('created_at', { ascending: false })
       .limit(5),
-    db
-      .from('automation_logs')
-      .select('id, trigger_event, status, created_at, automation:automations(name), contact:contacts(name, phone)')
-      .order('created_at', { ascending: false })
-      .limit(10),
   ])
 
   const items: ActivityItem[] = []
@@ -334,21 +371,22 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
     })
   }
 
-  for (const d of (deals.data ?? []) as unknown as Array<{
+  for (const o of (orders.data ?? []) as Array<{
     id: string
-    title: string
-    updated_at: string
-    stage: { name: string }[] | { name: string } | null
+    order_ref: string
+    total: number
+    status: string
+    customer_name: string | null
+    phone: string
+    created_at: string
   }>) {
-    const stage = Array.isArray(d.stage) ? d.stage[0] : d.stage
+    const who = o.customer_name || o.phone
     items.push({
-      id: `deal-${d.id}`,
-      kind: 'deal',
-      text: stage?.name
-        ? `Deal "${d.title}" in ${stage.name}`
-        : `Deal "${d.title}" updated`,
-      at: d.updated_at,
-      href: '/pipelines',
+      id: `order-${o.id}`,
+      kind: 'order',
+      text: `Order ${o.order_ref} — ${formatRs(o.total)} · ${who}${o.status === 'cancelled' ? ' (cancelled)' : ''}`,
+      at: o.created_at,
+      href: '/orders',
     })
   }
 
@@ -369,26 +407,6 @@ export async function loadActivity(db: DB, limit = 20): Promise<ActivityItem[]> 
       text: `Broadcast "${b.name}" ${label}`,
       at: b.created_at,
       href: '/broadcasts',
-    })
-  }
-
-  for (const l of (autoLogs.data ?? []) as unknown as Array<{
-    id: string
-    trigger_event: string
-    status: string
-    created_at: string
-    automation: { name: string }[] | { name: string } | null
-    contact: { name: string | null; phone: string }[] | { name: string | null; phone: string } | null
-  }>) {
-    const automation = Array.isArray(l.automation) ? l.automation[0] : l.automation
-    const contact = Array.isArray(l.contact) ? l.contact[0] : l.contact
-    const who = contact?.name || contact?.phone || 'a contact'
-    const autoName = automation?.name || 'Automation'
-    items.push({
-      id: `auto-${l.id}`,
-      kind: 'automation',
-      text: `Automation "${autoName}" ${l.status === 'failed' ? 'failed for' : 'triggered for'} ${who}`,
-      at: l.created_at,
     })
   }
 

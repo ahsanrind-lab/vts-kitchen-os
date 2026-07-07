@@ -13,9 +13,11 @@ import {
   Zap,
   AlertTriangle,
   RotateCcw,
+  ShieldAlert,
 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
+import { VTS_MANAGED_WEBHOOK, VTS_MANAGED_WEBHOOK_NOTE } from '@/lib/vts/managed';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -181,6 +183,13 @@ export function WhatsAppConfig() {
   }, [authLoading, profileLoading, user?.id, accountId, fetchConfig]);
 
   async function handleSave() {
+    // RULE 0 GUARD — saving re-verifies credentials with Meta and (with
+    // a PIN) re-registers the number, which would steal the webhook
+    // from the n8n bot. Locked at the deployment level.
+    if (VTS_MANAGED_WEBHOOK) {
+      toast.error('This number is managed by n8n. Saving/registering from the CRM is disabled — it would take the ordering bot offline.');
+      return;
+    }
     if (!phoneNumberId.trim()) {
       toast.error('Phone Number ID is required');
       return;
@@ -306,6 +315,12 @@ export function WhatsAppConfig() {
   }
 
   async function handleVerifyRegistration() {
+    // RULE 0 GUARD — this deployment must never poke Meta's
+    // registration surface.
+    if (VTS_MANAGED_WEBHOOK) {
+      toast.error('Registration is managed by n8n. Nothing to verify from the CRM.');
+      return;
+    }
     setVerifyingRegistration(true);
     setRegistrationProbe(null);
     try {
@@ -332,6 +347,12 @@ export function WhatsAppConfig() {
   }
 
   async function handleReset() {
+    // RULE 0 GUARD — deleting the config kills the mirror's ability to
+    // resolve inbound numbers. Locked at the deployment level.
+    if (VTS_MANAGED_WEBHOOK) {
+      toast.error('This configuration is managed by n8n and cannot be reset from the CRM.');
+      return;
+    }
     if (!confirm('This will delete the current WhatsApp config so you can re-enter it. Continue?')) {
       return;
     }
@@ -383,17 +404,40 @@ export function WhatsAppConfig() {
     );
   }
 
-  const showResetBanner = resetReason === 'token_corrupted';
+  const showResetBanner = resetReason === 'token_corrupted' && !VTS_MANAGED_WEBHOOK;
 
   return (
     <section className="animate-in fade-in-50 duration-200">
       <SettingsPanelHead
         title="WhatsApp connection"
-        description="Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here."
+        description={
+          VTS_MANAGED_WEBHOOK
+            ? 'Mirroring via n8n — the ordering bot owns the Meta webhook. This page is read-only for safety.'
+            : 'Connect your Meta WhatsApp Business API. Credentials, webhook, and setup steps all live here.'
+        }
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
       {/* Main config form */}
       <div className="space-y-6">
+        {/* RULE 0 — managed-by-n8n lock. This banner and the disabled
+            actions below are the guardrail against the one click that
+            can take live ordering down. */}
+        {VTS_MANAGED_WEBHOOK && (
+          <Alert className="border-red-600/50 bg-red-950/40">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="mt-0.5 size-5 shrink-0 text-red-400" />
+              <div>
+                <AlertTitle className="mb-1 text-red-200">
+                  Managed by n8n — do not re-verify
+                </AlertTitle>
+                <AlertDescription className="text-sm text-red-100/80">
+                  {VTS_MANAGED_WEBHOOK_NOTE}
+                </AlertDescription>
+              </div>
+            </div>
+          </Alert>
+        )}
+
         {/* Corrupted-token reset banner */}
         {showResetBanner && (
           <Alert className="bg-amber-950/40 border-amber-600/40">
@@ -443,7 +487,9 @@ export function WhatsAppConfig() {
           </div>
           <AlertDescription className="text-muted-foreground">
             {connectionStatus === 'connected'
-              ? 'Your access token authenticates with Meta. See Registration status below for whether webhooks are actually wired.'
+              ? VTS_MANAGED_WEBHOOK
+                ? 'The stored access token authenticates with Meta. It is used for outbound sends from the inbox only — inbound events arrive via the n8n mirror.'
+                : 'Your access token authenticates with Meta. See Registration status below for whether webhooks are actually wired.'
               : statusMessage ||
                 'Configure your Meta API credentials below to connect your WhatsApp Business account.'}
           </AlertDescription>
@@ -457,34 +503,50 @@ export function WhatsAppConfig() {
         {config && (
           <Alert
             className={
-              isRegistered
-                ? 'bg-emerald-950/30 border-emerald-700/50'
-                : 'bg-amber-950/30 border-amber-700/50'
+              VTS_MANAGED_WEBHOOK
+                ? 'bg-card border-border'
+                : isRegistered
+                  ? 'bg-emerald-950/30 border-emerald-700/50'
+                  : 'bg-amber-950/30 border-amber-700/50'
             }
           >
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <div className="flex items-center gap-2">
-                {isRegistered ? (
+                {VTS_MANAGED_WEBHOOK ? (
+                  <CheckCircle2 className="size-4 text-primary" />
+                ) : isRegistered ? (
                   <CheckCircle2 className="size-4 text-emerald-400" />
                 ) : (
                   <AlertTriangle className="size-4 text-amber-400" />
                 )}
                 <AlertTitle
                   className={
-                    'mb-0 ' + (isRegistered ? 'text-emerald-200' : 'text-amber-200')
+                    'mb-0 ' +
+                    (VTS_MANAGED_WEBHOOK
+                      ? 'text-foreground'
+                      : isRegistered
+                        ? 'text-emerald-200'
+                        : 'text-amber-200')
                   }
                 >
-                  {isRegistered
-                    ? 'Registered — Meta will deliver events to wacrm'
-                    : 'Not registered — Meta will not deliver events'}
+                  {VTS_MANAGED_WEBHOOK
+                    ? 'Registered to n8n — events flow through the ordering bot (expected)'
+                    : isRegistered
+                      ? 'Registered — Meta will deliver events to this CRM'
+                      : 'Not registered — Meta will not deliver events'}
                 </AlertTitle>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleVerifyRegistration}
-                disabled={verifyingRegistration}
-                className="border-border bg-transparent text-foreground hover:bg-muted h-7"
+                disabled={verifyingRegistration || VTS_MANAGED_WEBHOOK}
+                title={
+                  VTS_MANAGED_WEBHOOK
+                    ? 'Disabled: registration is owned by the n8n bot. Verifying from here can disconnect it.'
+                    : undefined
+                }
+                className="border-border bg-transparent text-foreground hover:bg-muted h-7 disabled:opacity-40"
               >
                 {verifyingRegistration ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -495,7 +557,13 @@ export function WhatsAppConfig() {
               </Button>
             </div>
             <AlertDescription className="text-muted-foreground mt-2 text-xs leading-relaxed">
-              {isRegistered ? (
+              {VTS_MANAGED_WEBHOOK ? (
+                <>
+                  This CRM intentionally holds NO Meta webhook registration.
+                  If inbound mirroring stops, check the n8n workflow and the
+                  Tap A configuration — never re-register from this page.
+                </>
+              ) : isRegistered ? (
                 <>
                   Subscribed since{' '}
                   {config.registered_at
@@ -523,7 +591,7 @@ export function WhatsAppConfig() {
               )}
             </AlertDescription>
 
-            {registrationProbe && (
+            {registrationProbe && !VTS_MANAGED_WEBHOOK && (
               <div className="mt-3 rounded border border-border bg-card/60 px-3 py-2 space-y-1.5 text-[11px]">
                 <p className="font-medium text-foreground">
                   Diagnostic — last run: {' '}
@@ -562,7 +630,9 @@ export function WhatsAppConfig() {
           <CardHeader>
             <CardTitle className="text-foreground">API Credentials</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Enter your Meta WhatsApp Business API credentials.
+              {VTS_MANAGED_WEBHOOK
+                ? 'Read-only in this deployment. The token is used for outbound sends; all setup is managed alongside the n8n bot.'
+                : 'Enter your Meta WhatsApp Business API credentials.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -572,7 +642,8 @@ export function WhatsAppConfig() {
                 placeholder="e.g. 100234567890123"
                 value={phoneNumberId}
                 onChange={(e) => setPhoneNumberId(e.target.value)}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                disabled={VTS_MANAGED_WEBHOOK}
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60"
               />
             </div>
 
@@ -582,7 +653,8 @@ export function WhatsAppConfig() {
                 placeholder="e.g. 100234567890456"
                 value={wabaId}
                 onChange={(e) => setWabaId(e.target.value)}
-                className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                disabled={VTS_MANAGED_WEBHOOK}
+                className="bg-muted border-border text-foreground placeholder:text-muted-foreground disabled:opacity-60"
               />
             </div>
 
@@ -603,7 +675,8 @@ export function WhatsAppConfig() {
                       setTokenEdited(true);
                     }
                   }}
-                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10"
+                  disabled={VTS_MANAGED_WEBHOOK}
+                  className="bg-muted border-border text-foreground placeholder:text-muted-foreground pr-10 disabled:opacity-60"
                 />
                 <button
                   type="button"
@@ -613,13 +686,14 @@ export function WhatsAppConfig() {
                   {showToken ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                 </button>
               </div>
-              {config && !tokenEdited && (
+              {config && !tokenEdited && !VTS_MANAGED_WEBHOOK && (
                 <p className="text-xs text-muted-foreground">
                   Token is hidden for security. Re-enter it to update configuration.
                 </p>
               )}
             </div>
 
+            {!VTS_MANAGED_WEBHOOK && (<>
             <div className="space-y-2">
               <Label className="text-muted-foreground">Webhook Verify Token</Label>
               <Input
@@ -656,7 +730,7 @@ export function WhatsAppConfig() {
                   Meta Business Manager → WhatsApp Accounts → Phone
                   Numbers → Two-step verification
                 </strong>
-                , then paste it here so wacrm can subscribe the number —
+                , then paste it here so the CRM can subscribe the number —
                 otherwise Meta routes inbound events to whichever app
                 last claimed it (the symptom that hits second numbers
                 under a shared WABA).{' '}
@@ -666,6 +740,7 @@ export function WhatsAppConfig() {
                 untouched.
               </p>
             </div>
+            </>)}
           </CardContent>
         </Card>
 
@@ -674,12 +749,16 @@ export function WhatsAppConfig() {
           <CardHeader>
             <CardTitle className="text-foreground">Webhook Configuration</CardTitle>
             <CardDescription className="text-muted-foreground">
-              Use this URL as your webhook callback in the Meta App Dashboard.
+              {VTS_MANAGED_WEBHOOK
+                ? 'This endpoint receives mirrored events from n8n (Tap A). Do not paste it into the Meta App Dashboard.'
+                : 'Use this URL as your webhook callback in the Meta App Dashboard.'}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              <Label className="text-muted-foreground">Webhook Callback URL</Label>
+              <Label className="text-muted-foreground">
+                {VTS_MANAGED_WEBHOOK ? 'Mirror endpoint (n8n Tap A)' : 'Webhook Callback URL'}
+              </Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
@@ -703,8 +782,9 @@ export function WhatsAppConfig() {
         <div className="flex flex-wrap gap-3">
           <Button
             onClick={handleSave}
-            disabled={saving}
-            className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={saving || VTS_MANAGED_WEBHOOK}
+            title={VTS_MANAGED_WEBHOOK ? 'Disabled: managed by n8n (Rule 0)' : undefined}
+            className="bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-40"
           >
             {saving ? (
               <>
@@ -733,7 +813,7 @@ export function WhatsAppConfig() {
               </>
             )}
           </Button>
-          {config && (
+          {config && !VTS_MANAGED_WEBHOOK && (
             <Button
               variant="outline"
               onClick={handleReset}
@@ -758,6 +838,38 @@ export function WhatsAppConfig() {
 
       {/* Setup Instructions Sidebar */}
       <div>
+        {VTS_MANAGED_WEBHOOK ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-foreground text-base">How this connection works</CardTitle>
+              <CardDescription className="text-muted-foreground">
+                The VTS Kitchen OS setup, in one picture.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm text-muted-foreground">
+              <p>
+                <strong className="text-foreground">1. Customer messages WhatsApp.</strong>{' '}
+                Meta delivers the event to the n8n ordering bot — the bot
+                owns the webhook and replies within seconds.
+              </p>
+              <p>
+                <strong className="text-foreground">2. n8n mirrors everything here.</strong>{' '}
+                Inbound messages, bot replies, confirmed orders, and human
+                handoffs stream into the Inbox and Orders board.
+              </p>
+              <p>
+                <strong className="text-foreground">3. Staff reply from the Inbox.</strong>{' '}
+                Outbound messages go straight to Meta using the stored
+                access token — that part works independently of the bot.
+              </p>
+              <p className="rounded-md border border-red-600/40 bg-red-950/30 p-3 text-red-200">
+                If something looks broken, contact VTS support. Re-verifying
+                or re-registering the number from any dashboard will take
+                the ordering bot offline.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
         <Card>
           <CardHeader>
             <CardTitle className="text-foreground text-base">Setup Instructions</CardTitle>
@@ -849,6 +961,7 @@ export function WhatsAppConfig() {
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
     </section>

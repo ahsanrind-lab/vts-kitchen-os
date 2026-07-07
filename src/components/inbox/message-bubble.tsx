@@ -13,6 +13,7 @@ import {
   LayoutTemplate,
   ImageOff,
   CornerDownLeft,
+  Bot,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ReplyQuote } from "./reply-quote";
@@ -249,7 +250,12 @@ export function MessageBubble({
   onToggleReaction,
 }: MessageBubbleProps) {
   const isAgent = message.sender_type === "agent" || message.sender_type === "bot";
+  const isBot = message.sender_type === "bot";
   const time = format(new Date(message.created_at), "HH:mm");
+  // Absolute timestamp on hover — relative/short times are fine for
+  // scanning but useless in a delivery dispute ("about 7 hours ago"
+  // vs "7 Jul 2026, 01:22"). Cheap tooltip via title=.
+  const absoluteTime = format(new Date(message.created_at), "d MMM yyyy, HH:mm:ss");
 
   // Row alignment + width cap are owned by <MessageActions> so its hover
   // group matches the bubble's content area, not the full row.
@@ -268,6 +274,16 @@ export function MessageBubble({
             : "rounded-bl-md bg-muted text-foreground",
         )}
       >
+        {/* Bot-vs-human authorship. Staff must be able to tell which
+            outbound replies "Zara" (the n8n bot) sent versus a teammate
+            — one wrong assumption in a live handoff double-messages the
+            customer. Human agent messages stay unbadged (the default). */}
+        {isBot && (
+          <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-primary-foreground/15 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary-foreground/90">
+            <Bot className="h-3 w-3" aria-hidden />
+            Bot
+          </span>
+        )}
         {reply && (
           <ReplyQuote
             authorLabel={reply.authorLabel}
@@ -282,7 +298,9 @@ export function MessageBubble({
             isAgent ? "justify-end" : "justify-start",
           )}
         >
-          <span
+          <time
+            dateTime={message.created_at}
+            title={absoluteTime}
             className={cn(
               "text-[10px]",
               // Outbound bubbles sit on the primary fill, so the
@@ -293,7 +311,7 @@ export function MessageBubble({
             )}
           >
             {time}
-          </span>
+          </time>
           {isAgent && <StatusIcon status={message.status} />}
         </div>
       </div>

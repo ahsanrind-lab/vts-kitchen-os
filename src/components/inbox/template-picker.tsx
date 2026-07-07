@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { MessageTemplate } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -207,11 +208,22 @@ export function TemplatePicker({
               </div>
             ) : templates.length === 0 ? (
               <div className="rounded-md border border-border bg-background/50 p-6 text-center">
-                <p className="text-sm text-popover-foreground">No approved templates</p>
+                <p className="text-sm text-popover-foreground">No approved templates yet</p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Approve a template in Meta WhatsApp Manager, then sync it
-                  from Settings → Templates.
+                  Templates are pre-approved messages that let you reply
+                  after WhatsApp&apos;s 24-hour window closes. Create one and
+                  submit it for approval — most utility templates are
+                  approved within minutes.
                 </p>
+                {/* This empty state is the bottom of the app's single
+                    worst dead end (locked composer → 0 templates), so it
+                    must hand the user a way out, not just an explanation. */}
+                <Link
+                  href="/settings?tab=templates"
+                  className="mt-3 inline-flex min-h-9 items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Open Settings → Templates
+                </Link>
               </div>
             ) : (
               templates.map((t) => (
