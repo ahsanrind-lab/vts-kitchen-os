@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useVtsAlerts } from "@/hooks/use-vts-alerts";
+import { AlertsBanner } from "@/components/orders/alerts-banner";
 import type { Notification } from "@/types";
 import { Bell, CheckCheck, Loader2, UserPlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -19,7 +21,12 @@ const TYPE_ICON: Record<Notification["type"], typeof Bell> = {
 
 export default function NotificationsPage() {
   const router = useRouter();
-  const { accountId } = useAuth();
+  const { accountId, canSendMessages } = useAuth();
+  // Live restaurant alerts (new orders + human handoffs) from
+  // vts_alerts — the same ringing stream the Orders board shows.
+  // Surfacing them here makes this page the single "what needs my
+  // attention" surface instead of assignment-pings-only.
+  const alertState = useVtsAlerts();
   const [notifications, setNotifications] = useState<Notification[] | null>(
     null,
   );
@@ -167,7 +174,8 @@ export default function NotificationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Conversations other teammates assign to you show up here.
+            Live restaurant alerts (orders, handoffs) and conversations
+            assigned to you.
           </p>
         </div>
         <Button
@@ -185,16 +193,26 @@ export default function NotificationsPage() {
         </Button>
       </div>
 
+      {/* Live alerts — same vts_alerts stream as the Orders board.
+          Acknowledging here silences the ring everywhere. */}
+      <AlertsBanner
+        alerts={alertState.alerts}
+        acknowledge={alertState.acknowledge}
+        soundEnabled={alertState.soundEnabled}
+        setSoundEnabled={alertState.setSoundEnabled}
+        canAck={canSendMessages}
+      />
+
       {notifications.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/40">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             <Bell className="h-6 w-6 text-primary" />
           </div>
           <p className="mt-3 text-sm font-medium text-foreground">
-            No notifications yet
+            No assignment notifications
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            You&apos;ll see an alert here when someone assigns you a
+            You&apos;ll see an entry here when someone assigns you a
             conversation.
           </p>
         </div>

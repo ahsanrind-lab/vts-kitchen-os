@@ -1,17 +1,17 @@
 {
-  "name": "wacrm",
+  "name": "vts-kitchen-os",
   "version": "0.7.0",
   "private": true,
   "description": "Self-hostable CRM template for WhatsApp built on Next.js and Supabase — shared inbox, contacts, sales pipelines, broadcasts, and no-code automations.",
   "license": "MIT",
   "author": "Arnas Donauskas",
-  "homepage": "https://github.com/ArnasDon/wacrm",
+  "homepage": "https://github.com/ahsanrind-lab/vts-kitchen-os",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/ArnasDon/wacrm.git"
+    "url": "git+https://github.com/ahsanrind-lab/vts-kitchen-os.git"
   },
   "bugs": {
-    "url": "https://github.com/ArnasDon/wacrm/issues"
+    "url": "https://github.com/ahsanrind-lab/vts-kitchen-os/issues"
   },
   "keywords": [
     "crm",

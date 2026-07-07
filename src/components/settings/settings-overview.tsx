@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useTheme } from '@/hooks/use-theme';
 import { THEMES } from '@/lib/themes';
 import { CURRENCIES } from '@/lib/currency';
+import { VTS_MANAGED_WEBHOOK } from '@/lib/vts/managed';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -157,12 +158,22 @@ export function SettingsOverview({
     {
       section: 'whatsapp',
       loading: whatsappLoading,
+      // In the VTS managed deployment the webhook belongs to the n8n
+      // bot. Labelling this tile "Connected" invited an admin to
+      // "check on" (and re-verify) the connection — the one click
+      // that can take the ordering bot down. Say what it really is.
       subtitle: !whatsapp?.configured ? (
         'Not set up yet'
       ) : whatsapp.connected ? (
-        <>
-          <StatusDot tone="ok" /> Connected
-        </>
+        VTS_MANAGED_WEBHOOK ? (
+          <>
+            <StatusDot tone="ok" /> Mirroring via n8n — do not re-verify
+          </>
+        ) : (
+          <>
+            <StatusDot tone="ok" /> Connected
+          </>
+        )
       ) : (
         <>
           <StatusDot tone="muted" /> Needs reconnecting

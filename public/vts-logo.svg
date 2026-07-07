@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" role="img" aria-label="VTS">
+  <defs>
+    <linearGradient id="vtsg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="0.5" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <linearGradient id="vtsg2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="0.55" stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#22d3ee"/>
+    </linearGradient>
+    <radialGradient id="vtsg3" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a855f7"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </radialGradient>
+    <filter id="vtsglow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Hex network mark -->
+  <g filter="url(#vtsglow)" stroke="url(#vtsg1)" stroke-width="9" fill="none">
+    <!-- ring -->
+    <path d="M80 25 L127.6 52.5 L127.6 107.5 L80 135 L32.4 107.5 L32.4 52.5 Z"/>
+    <!-- spokes -->
+    <path d="M80 25 L80 80 M127.6 52.5 L80 80 M127.6 107.5 L80 80 M80 135 L80 80 M32.4 107.5 L80 80 M32.4 52.5 L80 80"/>
+  </g>
+  <g filter="url(#vtsglow)">
+    <circle cx="80" cy="25" r="13" fill="#6d28d9" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="127.6" cy="52.5" r="13" fill="#2563eb" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="127.6" cy="107.5" r="13" fill="#2563eb" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="80" cy="135" r="13" fill="#6d28d9" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="32.4" cy="107.5" r="13" fill="#0ea5e9" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="32.4" cy="52.5" r="13" fill="#0ea5e9" stroke="url(#vtsg1)" stroke-width="6"/>
+    <circle cx="80" cy="80" r="21" fill="url(#vtsg3)"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="175" y="112" filter="url(#vtsglow)" fill="url(#vtsg2)"
+        font-family="Arial, Helvetica, sans-serif" font-size="96" font-weight="800"
+        letter-spacing="14">VTS</text>
+</svg>

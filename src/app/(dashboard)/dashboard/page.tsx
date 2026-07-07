@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useAuth } from '@/hooks/use-auth'
-import { formatCurrency } from '@/lib/currency'
+import { formatRs } from '@/lib/vts/orders'
 import {
   MessageSquare,
   UserPlus,
-  DollarSign,
+  ClipboardList,
+  Banknote,
+  Timer,
   Send,
 } from 'lucide-react'
 
@@ -15,14 +16,12 @@ import {
   loadActivity,
   loadConversationsSeries,
   loadMetrics,
-  loadPipelineDonut,
   loadResponseTime,
 } from '@/lib/dashboard/queries'
 import type {
   ActivityItem,
   ConversationsSeriesPoint,
   MetricsBundle,
-  PipelineDonutData,
   ResponseTimeSummary,
 } from '@/lib/dashboard/types'
 
@@ -30,14 +29,13 @@ import { MetricCard } from '@/components/dashboard/metric-card'
 import { SkeletonCard } from '@/components/dashboard/skeleton'
 import { QuickActions } from '@/components/dashboard/quick-actions'
 import { ConversationsChart } from '@/components/dashboard/conversations-chart'
-import { PipelineDonut } from '@/components/dashboard/pipeline-donut'
+import { OrdersStatusCard } from '@/components/dashboard/orders-status-card'
 import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
 import { ActivityFeed } from '@/components/dashboard/activity-feed'
 
 type RangeDays = 7 | 30 | 90
 
 export default function DashboardPage() {
-  const { defaultCurrency } = useAuth()
   const [metrics, setMetrics] = useState<MetricsBundle | null>(null)
   const [metricsLoading, setMetricsLoading] = useState(true)
 
@@ -51,9 +49,6 @@ export default function DashboardPage() {
     90: null,
   })
   const [seriesLoading, setSeriesLoading] = useState(true)
-
-  const [pipeline, setPipeline] = useState<PipelineDonutData | null>(null)
-  const [pipelineLoading, setPipelineLoading] = useState(true)
 
   const [responseTime, setResponseTime] = useState<ResponseTimeSummary | null>(null)
   const [responseTimeLoading, setResponseTimeLoading] = useState(true)
@@ -76,11 +71,6 @@ export default function DashboardPage() {
       .then((s) => setSeries((prev) => ({ ...prev, 30: s })))
       .catch((err) => console.error('[dashboard] series failed:', err))
       .finally(() => setSeriesLoading(false))
-
-    void loadPipelineDonut(db)
-      .then((p) => setPipeline(p))
-      .catch((err) => console.error('[dashboard] pipeline failed:', err))
-      .finally(() => setPipelineLoading(false))
 
     void loadResponseTime(db)
       .then((r) => setResponseTime(r))
@@ -124,14 +114,76 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Live analytics across conversations, contacts, deals, broadcasts, and automations.
+          Today&apos;s orders, sales, and conversations — live from WhatsApp.
         </p>
       </div>
 
-      {/* Metric cards */}
+      {/* Metric cards — restaurant KPIs. Business day rolls at 5am
+          Karachi time (matches vts_daily_sales), so late-night orders
+          count toward the evening they belong to. */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {metricsLoading || !metrics ? (
           Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)
+        ) : (
+          <>
+            <MetricCard
+              title="Orders Today"
+              value={metrics.todayOrders.current.toLocaleString()}
+              icon={ClipboardList}
+              delta={{
+                sign: metrics.todayOrders.current - metrics.todayOrders.previous,
+                label: deltaLabel(
+                  metrics.todayOrders.current - metrics.todayOrders.previous,
+                  'vs yesterday',
+                ),
+              }}
+            />
+            <MetricCard
+              title="Sales Today"
+              value={formatRs(metrics.todayRevenueRs.current)}
+              icon={Banknote}
+              delta={{
+                sign:
+                  metrics.todayRevenueRs.current - metrics.todayRevenueRs.previous,
+                label: `${formatRs(Math.abs(metrics.todayRevenueRs.current - metrics.todayRevenueRs.previous))} vs yesterday`,
+              }}
+            />
+            <MetricCard
+              title="Avg Fulfillment"
+              value={
+                metrics.avgFulfillmentMins == null
+                  ? '—'
+                  : `${Math.round(metrics.avgFulfillmentMins)} min`
+              }
+              icon={Timer}
+              subtitle={
+                metrics.deliveredToday === 0
+                  ? 'No deliveries completed yet today'
+                  : `${metrics.deliveredToday} delivered today (order → delivered)`
+              }
+            />
+            <MetricCard
+              title="Messages Sent Today"
+              value={metrics.messagesSentToday.current.toLocaleString()}
+              icon={Send}
+              delta={{
+                sign:
+                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
+                label: deltaLabel(
+                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
+                  'vs yesterday (bot + team)',
+                ),
+              }}
+            />
+          </>
+        )}
+      </div>
+
+      {/* Secondary strip: conversations + contacts stay useful for the
+          support persona, demoted below the money row. */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {metricsLoading || !metrics ? (
+          Array.from({ length: 2 }).map((_, i) => <SkeletonCard key={i} />)
         ) : (
           <>
             <MetricCard
@@ -156,25 +208,6 @@ export default function DashboardPage() {
                 ),
               }}
             />
-            <MetricCard
-              title="Open Deals Value"
-              value={formatCurrency(metrics.openDealsValue, defaultCurrency)}
-              icon={DollarSign}
-              subtitle={`${metrics.openDealsCount} open deal${metrics.openDealsCount === 1 ? '' : 's'}`}
-            />
-            <MetricCard
-              title="Messages Sent Today"
-              value={metrics.messagesSentToday.current.toLocaleString()}
-              icon={Send}
-              delta={{
-                sign:
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                label: deltaLabel(
-                  metrics.messagesSentToday.current - metrics.messagesSentToday.previous,
-                  'vs yesterday',
-                ),
-              }}
-            />
           </>
         )}
       </div>
@@ -183,12 +216,6 @@ export default function DashboardPage() {
       <QuickActions />
 
       {/* Charts row */}
-      {/* items-stretch (the grid default) stretches the two columns to
-          match the tallest sibling; adding h-full on each wrapper and
-          on the inner panels makes both cards actually fill that
-          stretched height so their rounded borders line up. Without
-          this, the pipeline card rendered at its natural (shorter)
-          height while the line chart drove the row height. */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <div className="h-full lg:col-span-3">
           <ConversationsChart
@@ -199,10 +226,9 @@ export default function DashboardPage() {
           />
         </div>
         <div className="h-full lg:col-span-2">
-          <PipelineDonut
-            data={pipeline}
-            loading={pipelineLoading}
-            currency={defaultCurrency}
+          <OrdersStatusCard
+            slices={metrics?.ordersByStatus ?? null}
+            loading={metricsLoading}
           />
         </div>
       </div>

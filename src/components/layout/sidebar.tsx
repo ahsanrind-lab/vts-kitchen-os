@@ -10,8 +10,8 @@ import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
   Bot,
+  ClipboardList,
   Crown,
-  GitBranch,
   LayoutDashboard,
   LogOut,
   MessageSquare,
@@ -22,9 +22,7 @@ import {
   UserCog,
   Users,
   UsersRound,
-  Workflow,
   X,
-  Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
 
@@ -89,15 +87,19 @@ interface NavItem {
   beta?: boolean;
 }
 
+// VTS Kitchen OS deployment: this nav is the restaurant staff's world.
+// Pipelines, Automations, and Flows are deliberately absent — the n8n
+// bot owns automated messaging (running CRM automations alongside it
+// double-messages customers), and B2B deal pipelines have no meaning
+// in a kitchen. Orders sits right under Dashboard because it IS the
+// product for cashier/kitchen/delivery roles.
 const navItems: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/orders", label: "Orders", icon: ClipboardList },
   { href: "/inbox", label: "Inbox", icon: MessageSquare },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/contacts", label: "Contacts", icon: Users },
-  { href: "/pipelines", label: "Pipelines", icon: GitBranch },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/automations", label: "Automations", icon: Zap },
-  { href: "/flows", label: "Flows", icon: Workflow, beta: true },
   { href: "/agents", label: "AI Agents", icon: Bot },
 ];
 
@@ -184,17 +186,12 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div
-              className="flex h-8 w-8 items-center justify-center rounded-lg"
-              style={{ background: "var(--vts-gradient)" }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/vts-icon.svg" alt="" className="h-5 w-5" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              VTS Kitchen OS
-            </span>
+          <Link href="/dashboard" className="flex items-center" aria-label="VTS Kitchen OS — Dashboard">
+            {/* Company logo (vector, transparent background — reads on
+                both light and dark surfaces). aria-label on the Link
+                carries the accessible name. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/vts-logo.svg" alt="VTS Kitchen OS" className="h-9 w-auto" />
           </Link>
           <button
             type="button"

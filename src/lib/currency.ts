@@ -10,8 +10,14 @@
  * nothing is known.
  */
 
-/** App-wide fallback when no account/deal currency is available. */
-export const DEFAULT_CURRENCY = "USD";
+/**
+ * App-wide fallback when no account/deal currency is available.
+ * VTS Kitchen OS deployment: PKR — this fork serves a Karachi
+ * restaurant, and a US$ fallback leaking onto any surface reads as
+ * an unconfigured template. The account row's default_currency is
+ * also set to PKR; this constant only covers the loading window.
+ */
+export const DEFAULT_CURRENCY = "PKR";
 
 export interface CurrencyOption {
   /** ISO-4217 code, e.g. "USD". Stored verbatim in the DB. */
@@ -28,6 +34,7 @@ export interface CurrencyOption {
  * list to offer more — nothing else needs to change.
  */
 export const CURRENCIES: CurrencyOption[] = [
+  { code: "PKR", label: "Pakistani Rupee", symbol: "Rs." },
   { code: "USD", label: "US Dollar", symbol: "$" },
   { code: "EUR", label: "Euro", symbol: "€" },
   { code: "GBP", label: "British Pound", symbol: "£" },
@@ -47,7 +54,7 @@ export const CURRENCIES: CurrencyOption[] = [
 /**
  * Format a deal value as a currency string. Whole-number output
  * (no minor units) — deal values are tracked to the dollar across
- * the app. `currency` defaults to USD so callers with nothing better
+ * the app. `currency` defaults to PKR so callers with nothing better
  * stay safe, but pass the account/deal currency wherever known.
  *
  * Total by design: `Intl.NumberFormat` throws a RangeError on a

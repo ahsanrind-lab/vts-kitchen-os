@@ -19,6 +19,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let p: any;
   try { p = await req.json(); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
   const phone = String(p.phone ?? '').replace(/\D/g, '');

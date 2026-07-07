@@ -1,13 +1,13 @@
 "use client"
 
 import Link from 'next/link'
-import { UserPlus, Briefcase, Radio, Zap } from 'lucide-react'
+import { ClipboardList, LayoutTemplate, Radio, Users } from 'lucide-react'
 import type { ComponentType } from 'react'
 
-// Quick-action shortcuts. Each navigates to the page that owns the
-// relevant "create" flow. We deliberately don't try to auto-open any
-// modal on the target page — that'd require touching those pages,
-// which is out of scope here.
+// Quick-action shortcuts, restaurant edition. An owner or manager's
+// daily verbs are "check the orders", "message customers", "fix a
+// template", "look someone up" — not "create a deal". Each navigates
+// to the page that owns the flow; no modal auto-opening.
 interface Action {
   label: string
   href: string
@@ -16,10 +16,10 @@ interface Action {
 }
 
 const ACTIONS: Action[] = [
-  { label: 'New Contact', href: '/contacts', icon: UserPlus, tint: 'text-primary' },
-  { label: 'New Deal', href: '/pipelines', icon: Briefcase, tint: 'text-blue-400' },
+  { label: "Today's Orders", href: '/orders', icon: ClipboardList, tint: 'text-primary' },
   { label: 'New Broadcast', href: '/broadcasts/new', icon: Radio, tint: 'text-amber-400' },
-  { label: 'New Automation', href: '/automations/new', icon: Zap, tint: 'text-primary' },
+  { label: 'Templates', href: '/settings?tab=templates', icon: LayoutTemplate, tint: 'text-blue-400' },
+  { label: 'Contacts', href: '/contacts', icon: Users, tint: 'text-primary' },
 ]
 
 export function QuickActions() {
