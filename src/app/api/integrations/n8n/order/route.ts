@@ -9,6 +9,7 @@ import { supabaseAdmin, ensureConversation } from '@/lib/vts/supabase-admin';
  */
 export async function POST(req: Request) {
   if (!verifyN8nSecret(req)) return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let p: any;
   try { p = await req.json(); } catch { return NextResponse.json({ error: 'bad json' }, { status: 400 }); }
   const orderRef = String(p.order_id ?? '').trim();

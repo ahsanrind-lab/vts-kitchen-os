@@ -32,8 +32,8 @@ export function VtsBotToggle({ conversationId, phone, botEnabled, onChanged }: {
       const j = await res.json();
       if (!res.ok) throw new Error(j.error ?? 'failed');
       onChanged?.(j.vts_bot_enabled);
-    } catch (e: any) {
-      setError(e.message);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
     }

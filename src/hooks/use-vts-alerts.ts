@@ -50,6 +50,7 @@ export function useVtsAlerts() {
   // Load persisted sound preference (client-only).
   useEffect(() => {
     try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSoundEnabledState(localStorage.getItem(SOUND_PREF_KEY) === 'on')
     } catch {
       /* storage unavailable — leave sound off */
