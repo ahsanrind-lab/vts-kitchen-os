@@ -104,6 +104,23 @@ export function useVtsOrders() {
       if (!data) return 'Not permitted (viewer role) or order not found'
       mapRef.current.set((data as VtsOrder).id, data as VtsOrder)
       flush()
+      // Customer WhatsApp notification — fire-and-forget through the
+      // n8n control workflow (same wording as the staff UPDATE command,
+      // mirrored into the inbox). A notify failure must never read as
+      // a status-change failure: the board update above already stuck.
+      const NOTIFY = new Set(['preparing', 'dispatched', 'delivered', 'cancelled'])
+      if (NOTIFY.has(status)) {
+        const o = data as VtsOrder
+        void fetch('/api/vts/notify-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ order_ref: o.order_ref, phone: o.phone, status }),
+        })
+          .then(async (r) => {
+            if (!r.ok) console.error('[vts] status notify failed:', await r.text())
+          })
+          .catch((e) => console.error('[vts] status notify failed:', e))
+      }
       return null
     },
     [flush],

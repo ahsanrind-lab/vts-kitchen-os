@@ -28,6 +28,7 @@ import type {
 import { MetricCard } from '@/components/dashboard/metric-card'
 import { SkeletonCard } from '@/components/dashboard/skeleton'
 import { QuickActions } from '@/components/dashboard/quick-actions'
+import { PromoCard } from '@/components/dashboard/promo-card'
 import { ConversationsChart } from '@/components/dashboard/conversations-chart'
 import { OrdersStatusCard } from '@/components/dashboard/orders-status-card'
 import { ResponseTimeChart } from '@/components/dashboard/response-time-chart'
@@ -214,6 +215,9 @@ export default function DashboardPage() {
 
       {/* Quick actions */}
       <QuickActions />
+
+      {/* Promo message (admin+ only; renders nothing for other roles) */}
+      <PromoCard />
 
       {/* Charts row */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
