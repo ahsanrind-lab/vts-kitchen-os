@@ -9,7 +9,6 @@ import { useTotalUnread } from "@/hooks/use-total-unread";
 import { useUnreadNotifications } from "@/hooks/use-unread-notifications";
 import {
   Bell,
-  Bot,
   ClipboardList,
   Crown,
   LayoutDashboard,
@@ -100,7 +99,6 @@ const navItems: NavItem[] = [
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/contacts", label: "Contacts", icon: Users },
   { href: "/broadcasts", label: "Broadcasts", icon: Radio },
-  { href: "/agents", label: "AI Agents", icon: Bot },
 ];
 
 const bottomNavItems = [

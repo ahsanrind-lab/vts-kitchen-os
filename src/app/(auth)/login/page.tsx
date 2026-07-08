@@ -67,10 +67,19 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md border-border bg-card">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070d1f] px-4">
+      {/* Premium backdrop: deep navy with brand glows (blue/violet) and a
+          subtle orange accent — the transparent logo sits directly on it. */}
+      <div aria-hidden className="pointer-events-none absolute -top-32 -left-32 h-96 w-96 rounded-full bg-blue-600/20 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute -bottom-40 -right-24 h-[28rem] w-[28rem] rounded-full bg-violet-600/15 blur-3xl" />
+      <div aria-hidden className="pointer-events-none absolute top-1/3 right-1/4 h-40 w-40 rounded-full bg-orange-500/10 blur-3xl" />
+      <Card className="relative w-full max-w-md border-white/10 bg-card/95 shadow-2xl shadow-blue-950/60 backdrop-blur">
         <CardHeader className="items-center text-center">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+          {/* Brand logo — vector with transparent background; w-auto
+              preserves aspect ratio, height steps up on larger screens. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/vts-logo.svg" alt="VTS Kitchen OS" className="mx-auto mb-3 h-14 w-auto max-w-[240px] sm:h-16" />
+          <div className="hidden mb-2 h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
             {inviteToken ? (
               <UsersRound className="h-6 w-6 text-primary" />
             ) : (
@@ -135,7 +144,7 @@ function LoginPageInner() {
             <Button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+              className="mt-2 h-10 w-full bg-orange-500 font-semibold text-white transition-colors hover:bg-orange-400 disabled:opacity-50"
             >
               {loading ? "Signing in..." : "Sign in"}
             </Button>
