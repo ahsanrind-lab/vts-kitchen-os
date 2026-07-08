@@ -105,6 +105,13 @@ export function useVtsAlerts() {
   const chime = useCallback(() => {
     const ctx = audioCtxRef.current
     if (!ctx || ctx.state !== 'running') return
+    // Cross-instance throttle: this hook mounts on several surfaces at
+    // once (global ringer + Orders/Notifications banners). Each keeps
+    // its own interval, so without this a pending alert would chime in
+    // overlapping stereo. One chime per ~2.5s across the whole tab.
+    const w = window as unknown as { __vtsLastChime?: number }
+    if (w.__vtsLastChime && Date.now() - w.__vtsLastChime < 2500) return
+    w.__vtsLastChime = Date.now()
     // Two-tone "order up" chime: E5 then A5, short and non-abrasive,
     // loud enough for a kitchen.
     const t0 = ctx.currentTime
