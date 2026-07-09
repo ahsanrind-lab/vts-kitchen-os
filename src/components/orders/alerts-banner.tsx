@@ -104,16 +104,26 @@ export function AlertsBanner({
               Open chat
             </Link>
           )}
-          {canAck && (
-            <button
-              type="button"
-              onClick={() => ack(alert.id)}
-              disabled={busyId === alert.id}
-              className="flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" aria-hidden />
-              {busyId === alert.id ? '…' : 'Acknowledge'}
-            </button>
+          {alert.type === 'new_order' ? (
+            /* No manual ack for orders — the ring IS the order's
+               "not started" state. The card's advance button
+               (Payment received / Start preparing / cancel) is the
+               acknowledgement; use-vts-orders auto-acks this alert. */
+            <span className="flex min-h-11 items-center rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-xs font-semibold text-primary">
+              Rings until the order is started
+            </span>
+          ) : (
+            canAck && (
+              <button
+                type="button"
+                onClick={() => ack(alert.id)}
+                disabled={busyId === alert.id}
+                className="flex min-h-11 items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" aria-hidden />
+                {busyId === alert.id ? '…' : 'Acknowledge'}
+              </button>
+            )
           )}
         </div>
       ))}
