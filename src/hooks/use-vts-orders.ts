@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 import {
   ACTIVE_STATUSES,
   type VtsOrder,
@@ -22,6 +23,7 @@ import {
  * guess.
  */
 export function useVtsOrders() {
+  const { user } = useAuth()
   const [orders, setOrders] = useState<VtsOrder[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const mapRef = useRef<Map<string, VtsOrder>>(new Map())
@@ -104,6 +106,26 @@ export function useVtsOrders() {
       if (!data) return 'Not permitted (viewer role) or order not found'
       mapRef.current.set((data as VtsOrder).id, data as VtsOrder)
       flush()
+      // One action, not two: advancing (or cancelling) an order IS the
+      // acknowledgement of its new-order ring (there is no manual ack for
+      // new_order alerts). Fire-and-forget — an ack failure must never
+      // read as a status-change failure; the realtime UPDATE on
+      // vts_alerts silences every device when it lands.
+      const advanced = data as VtsOrder
+      void supabase
+        .from('vts_alerts')
+        .update({
+          status: 'acknowledged',
+          acked_by: user?.id ?? null,
+          acked_at: new Date().toISOString(),
+        })
+        .eq('order_ref', advanced.order_ref)
+        .eq('type', 'new_order')
+        .eq('status', 'pending')
+        .then(({ error: ackErr }) => {
+          if (ackErr)
+            console.error('[vts] alert auto-ack failed:', ackErr.message)
+        })
       // Customer WhatsApp notification — fire-and-forget through the
       // n8n control workflow (same wording as the staff UPDATE command,
       // mirrored into the inbox). A notify failure must never read as
@@ -123,7 +145,7 @@ export function useVtsOrders() {
       }
       return null
     },
-    [flush],
+    [flush, user?.id],
   )
 
   return { orders, error, setStatus }
