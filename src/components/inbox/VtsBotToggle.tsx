@@ -53,7 +53,7 @@ export function VtsBotToggle({ conversationId, phone, botEnabled, onChanged }: {
       >
         {busy ? '…' : botEnabled ? '🙋 Take over' : '🤖 Give back to bot'}
       </button>
-      <span className={`text-xs ${botEnabled ? 'text-emerald-500' : 'text-amber-500'}`}>
+      <span className={`hidden text-xs xl:inline ${botEnabled ? 'text-emerald-500' : 'text-amber-500'}`}>
         {botEnabled ? 'Bot is replying' : 'Human mode — bot silenced'}
       </span>
       {error && <span className="text-xs text-red-500">{error}</span>}

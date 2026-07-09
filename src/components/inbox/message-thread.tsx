@@ -47,6 +47,7 @@ import {
 import { deleteAccountMedia } from "@/lib/storage/upload-media";
 import { TemplatePicker } from "./template-picker";
 import { buildReplyPreview } from "./reply-quote";
+import { VtsBotToggle } from "./VtsBotToggle";
 import { toast } from "sonner";
 
 interface ReplyDraft {
@@ -106,6 +107,7 @@ interface MessageThreadProps {
    */
   contactPanelOpen?: boolean;
   onToggleContactPanel?: () => void;
+  onBotToggle?: (conversationId: string, enabled: boolean) => void;
 }
 
 function formatDateSeparator(dateStr: string): string {
@@ -164,6 +166,7 @@ export function MessageThread({
   onRefresh,
   contactPanelOpen,
   onToggleContactPanel,
+  onBotToggle,
 }: MessageThreadProps) {
   const { user } = useAuth();
   const { getPresence, getRow, now } = usePresence();
@@ -856,6 +859,13 @@ export function MessageThread({
         </div>
 
         <div className="flex items-center gap-2">
+          <VtsBotToggle
+            conversationId={conversation.id}
+            phone={contact.phone}
+            botEnabled={conversation.vts_bot_enabled ?? true}
+            onChanged={(enabled) => onBotToggle?.(conversation.id, enabled)}
+          />
+
           {/* Contact-panel toggle — desktop only. The contact sidebar
               eats a chunk of horizontal width that crowds the thread on
               smaller laptops; this lets agents reclaim it when they just
