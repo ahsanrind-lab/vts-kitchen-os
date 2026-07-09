@@ -156,6 +156,8 @@ export interface Conversation {
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
+  vts_bot_enabled?: boolean;
+  vts_handoff_at?: string | null;
   created_at: string;
   updated_at: string;
   contact?: Contact;
