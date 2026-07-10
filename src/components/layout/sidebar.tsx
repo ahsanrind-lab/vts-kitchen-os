@@ -225,18 +225,9 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               }}
             />
           </div>
-          <div className="flex flex-col items-center">
-            <span className="text-sm font-bold tracking-tight text-foreground">
-              Pizza Day Night
-            </span>
-            <span className="mt-1 text-[9px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
-              Powered by
-            </span>
-            <span className="mt-0.5 text-sm font-semibold tracking-tight text-foreground">
-              Vintage Tech Solutions
-            </span>
-            <span aria-hidden className="mt-1.5 h-px w-8 rounded-full bg-primary/70" />
-          </div>
+          <span className="text-sm font-bold tracking-tight text-foreground">
+            Pizza Day Night
+          </span>
         </div>
 
         {/* Main navigation */}
@@ -428,6 +419,18 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
+
+        {/* VTS signature — pinned to the sidebar footer, below the
+            Settings/user area. */}
+        <div className="flex shrink-0 flex-col items-center border-t border-border px-4 py-3">
+          <span className="text-[9px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
+            Powered by
+          </span>
+          <span className="mt-0.5 text-sm font-semibold tracking-tight text-foreground">
+            Vintage Tech Solutions
+          </span>
+          <span aria-hidden className="mt-1.5 h-px w-8 rounded-full bg-primary/70" />
         </div>
       </aside>
     </>
