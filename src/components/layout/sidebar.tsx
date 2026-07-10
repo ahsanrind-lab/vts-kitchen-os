@@ -185,11 +185,20 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
           <Link href="/dashboard" className="flex items-center" aria-label="VTS Kitchen OS — Dashboard">
-            {/* Company logo (vector, transparent background — reads on
-                both light and dark surfaces). aria-label on the Link
-                carries the accessible name. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/vts-logo.svg" alt="VTS Kitchen OS" className="h-9 w-auto" />
+            {/* Client logo — square art masked to a circle. Falls back to
+                the VTS wordmark until /pdn-logo.jpg is added to /public. */}
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full ring-1 ring-border shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/pdn-logo.jpg"
+                alt="Pizza Day Night"
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "/vts-logo.svg";
+                }}
+              />
+            </span>
           </Link>
           <button
             type="button"
@@ -199,6 +208,32 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
           >
             <X className="h-5 w-5" />
           </button>
+        </div>
+
+        {/* Client brand + VTS signature — demo branding requested
+            2026-07-10. Theme tokens keep it dark-mode correct; the
+            accent line rides the primary (orange) token. */}
+        <div className="flex shrink-0 flex-col items-center gap-3 border-b border-border px-4 py-5">
+          <div className="h-16 w-16 shrink-0 overflow-hidden rounded-full ring-1 ring-border shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/pdn-logo.jpg"
+              alt="Pizza Day Night"
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] font-medium uppercase tracking-[0.28em] text-muted-foreground">
+              Powered by
+            </span>
+            <span className="mt-0.5 text-sm font-semibold tracking-tight text-foreground">
+              Vintage Tech Solutions
+            </span>
+            <span aria-hidden className="mt-1.5 h-px w-8 rounded-full bg-primary/70" />
+          </div>
         </div>
 
         {/* Main navigation */}
