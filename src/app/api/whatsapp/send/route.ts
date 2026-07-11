@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { callControl } from '@/lib/vts/control'
 import {
   checkRateLimit,
   rateLimitResponse,
@@ -20,7 +21,52 @@ import {
 // endpoint reuses. This route is a thin adapter: resolve the
 // conversation, delegate, then map `SendMessageError` back onto the
 // dashboard's internal `{ error }` shape.
+/**
+ * VTS sliding human-mode TTL (F6 companion, 2026-07-11): while a human owns a
+ * conversation (vts_bot_enabled === false), every staff reply from the dashboard
+ * re-arms the 30-minute Redis human:{phone} window via VTS Control 'takeover',
+ * so the bot cannot wake up mid-conversation. Wrapper pattern: the original
+ * handler is untouched below; the re-arm is fire-and-forget AFTER a successful
+ * send and can never fail or delay the send itself. Bot-active conversations
+ * are deliberately unaffected — a staff reply does not silence an active bot.
+ */
 export async function POST(request: Request) {
+  const probe = request.clone()
+  const res = await _POST(request)
+  if (res.ok) {
+    void (async () => {
+      try {
+        const b = (await probe.json().catch(() => null)) as {
+          conversation_id?: string
+        } | null
+        const conversationId = b?.conversation_id
+        if (!conversationId) return
+        const supabase = await createClient()
+        const {
+          data: { user },
+        } = await supabase.auth.getUser()
+        const { data: convo } = await supabase
+          .from('conversations')
+          .select('vts_bot_enabled, contact:contacts(phone)')
+          .eq('id', conversationId)
+          .maybeSingle()
+        const contact = (convo?.contact ?? null) as { phone?: string } | null
+        if (convo?.vts_bot_enabled === false && contact?.phone) {
+          await callControl({
+            action: 'takeover',
+            phone: contact.phone,
+            agent: user?.email ?? user?.id ?? 'crm',
+          })
+        }
+      } catch {
+        /* sliding TTL is best-effort; never surface an error for it */
+      }
+    })()
+  }
+  return res
+}
+
+async function _POST(request: Request) {
   try {
     const supabase = await createClient()
 
