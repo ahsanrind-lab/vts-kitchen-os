@@ -26,3 +26,30 @@ application only via approval package (MFA + key-rotation gates).
 ## Blockers (2026-07-17)
 B2 staging Supabase (in progress) | B3 staging n8n (needs Docker host) |
 B4 official menu/hours doc | B5 sandbox: no Postgres/no installs/no VPS-git-push.
+
+## Test classification note
+All matrix tests so far = DATABASE-CONTEXT/RLS tests (SET LOCAL ROLE + jwt.claims
+simulation). NOT full real-auth E2E: actual JWT login + UI flows happen when CRM
+staging connects, using the real Auth identities below.
+
+## Real staging Auth identities (2026-07-17)
+8 GoTrue users (owner/admin/agent-DHA/viewer-JHR/rider-DHA x2/rider-JHR/tenant2),
+ids ...101..108, emails @pdn-staging.test/@other.test. Passwords = random bcrypt
+of discarded entropy (unknowable, stored nowhere). GoTrue admin list 200 OK.
+Future login: admin generateLink (recovery) in-page when CRM staging connects.
+
+## Repo layout normalization (2026-07-17)
+032-039 copied into supabase/migrations/ (exact SQL, one commit each, no
+collisions, NOT reapplied). CLI discovery now 001-041 complete.
+
+## Arc C apply log (2026-07-17)
+040 outbox (service-role claim/lease/dead-letter) HTTP 201 '040'; 041 RPCs
+(10 public + 3 private) HTTP 201 '041'. History = 001-041.
+EVIDENCE: anon RPC + SELECT denied; authenticated denied outbox_claim_batch;
+unknown sub fail-closed; staff preparing->ready ok + duplicate-safe; cross-branch
++ cross-tenant fail-closed; PARALLEL assign race -> exactly one winner, loser
+already_assigned same id; wrong rider not_assigned_to_you; parallel collect-vs-
+fail serialized to legal collected->failed; reassign -> new delivery rider-108;
+outbox dup key collapsed to 1 row; lease: A=3, B=3, third claim 0; complete ok=
+delivered, fail=backoff pending, max_attempts=dead; admin_correct notes ok,
+total blocked (field_not_correctable).
